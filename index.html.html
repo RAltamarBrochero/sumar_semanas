@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sumador de semanas · Historia laboral Colpensiones</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--ink:#14213d;--mut:#5b6577;--line:#d9dee8;--acc:#14213d;--gold:#c8962e;--ok:#1b7a43;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1420;--card:#18202f;--ink:#e8ecf4;--mut:#9aa5b8;--line:#2b3547;--acc:#c8962e;--gold:#e0b04f;--ok:#4cc38a;--bad:#ff8a80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1420;--card:#18202f;--ink:#e8ecf4;--mut:#9aa5b8;--line:#2b3547;--acc:#c8962e;--gold:#e0b04f;--ok:#4cc38a;--bad:#ff8a80;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1240px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.5rem;margin:.2rem 0}
+.sub{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer}
+#drop.over{border-color:var(--gold)}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) button.pri{color:#14213d}}
+button.on{outline:2px solid var(--gold)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tbl{overflow-x:auto;max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--card)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+#res{font-size:1.15rem}
+#res .big{display:block;font-size:2rem;font-weight:800;color:var(--gold)}
+.note{color:var(--mut);font-size:.88rem}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
+textarea{width:100%;min-height:90px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;font:13px monospace}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
+.ledger{position:sticky;top:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.ledger{position:static}}
+.cur{background:rgba(200,150,46,.28)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>Sumador de semanas cotizadas</h1>
+<p class="sub">Sube la historia laboral de Colpensiones (PDF) y verifica el total de semanas. Todo se procesa en tu navegador; el archivo no se envía a ningún servidor.</p>
+
+<div class="card">
+  <div id="drop">📄 Arrastra aquí el PDF de la historia laboral o haz clic para elegirlo<input id="file" type="file" accept="application/pdf" class="hide"></div>
+  <details style="margin-top:10px"><summary class="note">¿Prefieres pegar el texto copiado del PDF?</summary>
+    <textarea id="paste" placeholder="Pega aquí el texto de la historia laboral…"></textarea>
+    <button id="usePaste" style="margin-top:6px">Leer texto pegado</button>
+  </details>
+  <p id="status" class="note" style="margin:10px 0 0"></p>
+</div>
+
+<div id="work" class="grid hide">
+<div class="card" style="margin:0">
+  <div id="meta" class="note"></div>
+  <div class="tabs" id="tabs">
+    <button data-m="todo" class="on">Todo</button>
+    <button data-m="anio">Por año</button>
+    <button data-m="mes">Por mes</button>
+    <button data-m="pag">Por página</button>
+  </div>
+  <div class="bar">
+    <button id="all">Marcar todo</button><button id="none">Quitar todo</button>
+    <button id="sum" class="pri">Sumar</button>
+  </div>
+  <div class="tbl"><table><thead><tr><th></th><th>Periodo</th><th class="n">Semanas</th><th class="n">Días</th></tr></thead><tbody id="items"></tbody></table></div>
+  <div id="res" class="card" style="margin-top:14px"></div>
+  <details><summary class="note">Ver detalle de cada línea leída del PDF</summary>
+    <div class="tbl" style="margin-top:8px"><table><thead><tr><th>Pág.</th><th>Aportante</th><th>Desde</th><th>Hasta</th><th class="n">Semanas</th><th class="n">Lic</th><th class="n">Sim</th><th class="n">Total</th><th class="n">Días</th></tr></thead><tbody id="rows"></tbody></table></div>
+  </details>
+</div>
+<aside class="card ledger" style="margin:0">
+  <div class="bar" style="margin-top:0"><b>Cinta de suma</b><button id="rescan">▶ Escanear</button><button id="skip">Mostrar todo</button></div>
+  <p class="note" style="margin:0 0 8px">Cada aporte leído del PDF, en orden, con el total que va acumulando. Desmarca un aporte para sacarlo de la suma.</p>
+  <div class="tbl" id="tape" style="max-height:60vh"><table><thead><tr><th></th><th>Pág.</th><th>Periodo</th><th class="n">Aporte</th><th class="n">Acumulado</th></tr></thead><tbody id="cinta"></tbody></table></div>
+  <div id="tapeTot" style="margin-top:10px;font-size:1.05rem"></div>
+</aside>
+</div>
+</main>
+
+<script>
+const F=n=>n.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num=s=>parseFloat(s.replace(/\./g,'').replace(',','.'));
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const $=id=>document.getElementById(id);
+let rows=[],info={},mode='todo',items=[];
+try{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}catch(e){}
+
+const RX=/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2})\/(\d{2})\/(\d{4})\s+\$\s*([\d.]+)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)/g;
+
+function parsePages(pages){
+  rows=[];info={};let stop=false;
+  pages.forEach((lines,pi)=>{
+    if(stop)return;
+    let t=lines.join(' ');
+    const k=t.search(/\[?10\]?\s*TOTAL SEMANAS COTIZADAS/i);
+    if(k>=0){t=t.slice(0,k);stop=true}
+    let last=0,m;RX.lastIndex=0;
+    while((m=RX.exec(t))){
+      const pre=t.slice(last,m.index).trim();last=RX.lastIndex;
+      const id=/(\d{6,}\s+\D*)$/.exec(pre);
+      const a=Date.UTC(+m[3],+m[2]-1,+m[1]),b=Date.UTC(+m[6],+m[5]-1,+m[4]);
+      const tot=num(m[11]);
+      rows.push({p:pi+1,ap:id?id[1].replace(/^\d+\s+/,'').trim():'—',d1:`${m[1]}/${m[2]}/${m[3]}`,d2:`${m[4]}/${m[5]}/${m[6]}`,a,b,sem:num(m[8]),lic:num(m[9]),sim:num(m[10]),tot,dias:Math.round(tot*7)});
+    }
+  });
+  const all=pages.map(p=>p.join('\n')).join('\n');
+  let x;info.npdf=pages.length;info.foot=pages.map(p=>/(\d+)\s+de\s+(\d+)\s*$/.exec(p.join(' ').trim()));
+  if(x=/\[?10\]?\s*TOTAL SEMANAS COTIZADAS:?\s*([\d.]+,\d+)/i.exec(all))info.of=num(x[1]);
+  if(x=/\[?21\]?\s*TOTAL SEMANAS REPORTADAS:?\s*([\d.]+,\d+)/i.exec(all))info.pub=num(x[1]);
+  if(x=/\[?26\]?\s*TOTAL SEMANAS[^\n]*?([\d.]+,\d+)\s*$/im.exec(all))info.t26=num(x[1]);
+  if(x=/Nombre:\s+(.+?)\s{2,}/.exec(all))info.nombre=x[1];
+}
+
+async function readPdf(buf){
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise,pages=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    $('status').textContent=`Leyendo página ${i} de ${pdf.numPages}…`;
+    const tc=await (await pdf.getPage(i)).getTextContent(),ls=[];
+    tc.items.filter(it=>it.str.trim()).map(it=>({x:it.transform[4],y:it.transform[5],s:it.str})).sort((a,b)=>b.y-a.y).forEach(it=>{const l=ls[ls.length-1];if(l&&Math.abs(l.y-it.y)<=4)l.t.push(it);else ls.push({y:it.y,t:[it]})});
+    pages.push(ls.map(l=>l.t.sort((p,q)=>p.x-q.x).map(t=>t.s).join(' ')));
+  }
+  return pages;
+}
+
+function done(){
+  const st=$('status');
+  if(!rows.length){st.innerHTML='<span class="bad">No encontré líneas de semanas. Verifica que sea una historia laboral de Colpensiones en PDF con texto (no una foto).</span>';$('work').classList.add('hide');return}
+  const ex=rows.reduce((s,r)=>s+r.dias,0)/7;
+  let msg=`Se leyeron ${rows.length} líneas del resumen por empleador.`;
+  if(info.of!=null){const ok=Math.abs(ex-info.of)<0.02;msg+=ok?` <span class="ok">✔ El total calculado coincide con el de Colpensiones (${F(info.of)}).</span>`:` <span class="bad">⚠ Difiere del total de Colpensiones (${F(info.of)}); revisa las líneas leídas.</span>`}
+  st.innerHTML=msg;
+  $('meta').innerHTML=(info.nombre?`<b>${info.nombre}</b> · `:'')+pdfInfo()+` · ${rows.length} aportes leídos (en las páginas ${rows[0].p} a ${rows[rows.length-1].p} del PDF)`;
+  $('rows').innerHTML=rows.map(r=>`<tr><td>${r.p}</td><td>${r.ap}</td><td>${r.d1}</td><td>${r.d2}</td><td class="n">${F(r.sem)}</td><td class="n">${F(r.lic)}</td><td class="n">${F(r.sim)}</td><td class="n">${F(r.tot)}</td><td class="n">${r.dias}</td></tr>`).join('');
+  $('work').classList.remove('hide');setMode('todo');cinta(true);
+}
+
+function pdfInfo(){
+  const fn=(info.foot||[]).filter(Boolean),orig=fn.length?Math.max(...fn.map(x=>+x[2])):0,n=info.npdf;
+  let t=`PDF con <b>${n} página${n>1?'s':''}</b>`;
+  if(orig&&n===1&&orig>1)t+=` (es la página ${fn[0][1]} de ${orig} del reporte original; las otras ${orig-1} no están en este archivo)`;
+  else if(orig&&n<orig)t+=` (el reporte original tiene ${orig}; este archivo solo trae ${n})`;
+  else if(orig&&n===orig)t+=' (reporte completo)';
+  return t;
+}
+
+/* Cinta de suma: aporte por aporte con total acumulado */
+let scan=0;
+async function cinta(anim){
+  const my=++scan,body=$('cinta'),n=rows.length,delay=anim?Math.min(60,2500/n):0;
+  body.innerHTML='';
+  for(let i=0;i<n;i++){
+    if(my!==scan)return;
+    const r=rows[i],tr=document.createElement('tr');tr.dataset.i=i;
+    tr.innerHTML=`<td><input type="checkbox" checked></td><td>${r.p}</td><td>${r.d1.slice(3)} → ${r.d2.slice(3)}${r.tot===0?' <span class="note">(sin aporte)</span>':''}</td><td class="n">${F(r.tot)}</td><td class="n"></td>`;
+    body.querySelectorAll('.cur').forEach(x=>x.classList.remove('cur'));
+    if(delay)tr.classList.add('cur');
+    body.appendChild(tr);recalc();
+    if(delay){$('tape').scrollTop=1e9;await new Promise(s=>setTimeout(s,delay))}
+  }
+  body.querySelectorAll('.cur').forEach(x=>x.classList.remove('cur'));
+}
+function recalc(){
+  let d=0,w=0,c=0;
+  document.querySelectorAll('#cinta tr').forEach(tr=>{
+    const on=tr.querySelector('input').checked,r=rows[+tr.dataset.i];
+    tr.style.opacity=on?1:.4;if(on){d+=r.dias;w+=r.tot;c++}
+    tr.lastElementChild.textContent=F(d/7);
+  });
+  $('tapeTot').innerHTML=`Total de ${c} aportes: <b style="font-size:1.5rem;color:var(--gold)">${F(d/7)}</b> semanas<div class="note">Suma simple de los valores impresos: ${F(w)}</div>`;
+}
+
+/* Reparte cada línea entre los meses que abarca, proporcional a los días calendario */
+function build(m){
+  const out={};
+  const add=(k,lab,dias,w)=>{(out[k]=out[k]||{lab,dias:0,w:0});out[k].dias+=dias;out[k].w+=w};
+  rows.forEach(r=>{
+    if(m==='todo'){add('t','Toda la historia laboral',r.dias,r.tot);return}
+    if(m==='pag'){add(String(r.p).padStart(3,'0'),'Página '+r.p,r.dias,r.tot);return}
+    const cal=(r.b-r.a)/864e5+1;let d=new Date(r.a);d=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1));
+    while(d.getTime()<=r.b){
+      const s=Math.max(d.getTime(),r.a),e=Math.min(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1)-864e5,r.b);
+      const f=((e-s)/864e5+1)/cal,y=d.getUTCFullYear(),mo=d.getUTCMonth();
+      if(m==='anio')add(String(y),String(y),r.dias*f,r.tot*f);else add(`${y}-${String(mo+1).padStart(2,'0')}`,`${MES[mo]} ${y}`,r.dias*f,r.tot*f);
+      d=new Date(Date.UTC(y,mo+1,1));
+    }
+  });
+  return Object.keys(out).sort().map(k=>out[k]);
+}
+
+function setMode(m){
+  mode=m;document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  items=build(m);
+  $('items').innerHTML=items.map((it,i)=>`<tr><td><input type="checkbox" data-i="${i}" checked></td><td>${it.lab}</td><td class="n">${F(it.dias/7)}</td><td class="n">${Math.round(it.dias*10)/10}</td></tr>`).join('');
+  sumar();
+}
+
+function sumar(){
+  const ck=[...document.querySelectorAll('#items input:checked')].map(c=>items[+c.dataset.i]);
+  const dias=ck.reduce((s,i)=>s+i.dias,0),simple=ck.reduce((s,i)=>s+i.w,0),sem=dias/7;
+  let h=`Total de semanas (${ck.length} de ${items.length} seleccionados):<span class="big"><b>${F(sem)}</b> semanas</span>`;
+  h+=`<div class="note">Cálculo exacto: ${Math.round(dias)} días ÷ 7. Equivale a ${F(sem/52.142857)} años de cotización.<br>Suma simple de los valores impresos (cada uno redondeado): ${F(simple)}`;
+  if(Math.abs(simple-sem)>=0.005)h+=` · diferencia por redondeo: ${F(simple-sem)}`;
+  h+='</div>';
+  if(mode==='todo'&&ck.length&&info.of!=null)h+=`<div class="note">Total oficial de Colpensiones (campo 10): <b>${F(info.of)}</b> ${Math.abs(sem-info.of)<0.02?'<span class="ok">✔ coincide</span>':'<span class="bad">⚠ no coincide</span>'}</div>`;
+  if(mode==='todo'&&info.pub)h+=`<div class="note">Tiempos públicos no cotizados reportados (informativo, no incluidos arriba): ${F(info.pub)}${info.t26?` · Total general según Colpensiones: ${F(info.t26)}`:''}</div>`;
+  if(mode==='anio'||mode==='mes')h+='<div class="note">Las líneas que abarcan varios meses se reparten entre ellos según los días calendario; por eso año y mes son aproximados, pero el total siempre cuadra.</div>';
+  $('res').innerHTML=h;
+}
+
+async function loadFile(f){
+  if(!f)return;
+  rows=[];info={};$('work').classList.add('hide');
+  try{$('status').textContent='Leyendo PDF…';parsePages(await readPdf(await f.arrayBuffer()));done()}
+  catch(e){$('status').innerHTML='<span class="bad">No pude leer el PDF: '+e.message+'</span>'}
+  $('file').value='';
+}
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>loadFile(e.target.files[0]);
+['dragover','dragenter'].forEach(t=>$('drop').addEventListener(t,e=>{e.preventDefault();$('drop').classList.add('over')}));
+['dragleave','drop'].forEach(t=>$('drop').addEventListener(t,e=>{e.preventDefault();$('drop').classList.remove('over')}));
+$('drop').addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+$('usePaste').onclick=()=>{const pages=$('paste').value.split('\f').map(p=>p.split('\n'));parsePages(pages);done()};
+$('tabs').onclick=e=>{if(e.target.dataset.m)setMode(e.target.dataset.m)};
+$('all').onclick=()=>{document.querySelectorAll('#items input').forEach(c=>c.checked=true);sumar()};
+$('none').onclick=()=>{document.querySelectorAll('#items input').forEach(c=>c.checked=false);sumar()};
+$('sum').onclick=sumar;
+$('cinta').addEventListener('change',recalc);
+$('rescan').onclick=()=>cinta(true);
+$('skip').onclick=()=>cinta(false);
+$('items').addEventListener('change',sumar);
+</script>
+</body>
+</html>
